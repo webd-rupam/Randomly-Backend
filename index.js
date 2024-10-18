@@ -8,7 +8,7 @@ const port = process.env.PORT || 4500;
 const server = http.createServer(app);
 const io = socketIO(server, {
   cors: {
-    origin: "*", // Allow all origins for development
+    origin: "https://randomlychat.vercel.app", 
     methods: ["GET", "POST"],
   },
 });
