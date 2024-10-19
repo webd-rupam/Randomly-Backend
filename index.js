@@ -56,18 +56,15 @@ io.on("connection", (socket) => {
   socket.on('disconnect', () => {
     console.log('A user disconnected:', socket.id);
 
-    // If the disconnected user was waiting, reset the waiting user
-    if (waitingUser === socket.id) {
-      waitingUser = null;
+    // Notify the paired user that their stranger has left
+    if (activeUser !== null && activeUser !== socket.id) {
+      io.to(activeUser).emit('leave', { message: "Stranger has left the chat." });
     }
 
-    // Notify the other user in the room that the stranger left
-    const rooms = Array.from(socket.rooms);
-    const room = rooms[1]; // Get the room the user was in
-    socket.broadcast.to(room).emit('leave', { message: "Stranger has left the chat." });
-
-    // Leave the room
-    socket.leave(room);
+    // Reset the active user if they were the one who disconnected
+    if (activeUser === socket.id) {
+      activeUser = null;
+    }
   });
 });
 
