@@ -14,6 +14,7 @@ const io = socketIO(server, {
 });
 
 let waitingUser = null; // Track a single waiting user
+let userRooms = {}; // Track which room a user is in
 
 app.use(cors());
 app.get('/', (req, res) => {
@@ -39,14 +40,17 @@ io.on("connection", (socket) => {
       // Make both users join the same room
       io.sockets.sockets.get(waitingUser).join(room);
 
+      // Track which room users are in
+      userRooms[socket.id] = room;
+      userRooms[waitingUser] = room;
+
       waitingUser = null; // Reset waiting user
     }
   });
 
   // Send a message to the pair (within the same room)
   socket.on('message', ({ message, id }) => {
-    const rooms = Array.from(socket.rooms);
-    const room = rooms[1]; // Get the room the user is in (index 0 is the default room)
+    const room = userRooms[socket.id]; // Get the room the user is in
     if (room) {
       io.to(room).emit("sendMessage", { message, id });
     }
@@ -56,14 +60,18 @@ io.on("connection", (socket) => {
   socket.on('disconnect', () => {
     console.log('A user disconnected:', socket.id);
 
-    // Notify the paired user that their stranger has left
-    if (activeUser !== null && activeUser !== socket.id) {
-      io.to(activeUser).emit('leave', { message: "Stranger has left the chat." });
+    // Find the room the user was in and notify the other user in the same room
+    const room = userRooms[socket.id];
+    if (room) {
+      socket.to(room).emit('leave', { message: "Stranger has left the chat." });
+
+      // Clean up the room
+      delete userRooms[socket.id];
     }
 
-    // Reset the active user if they were the one who disconnected
-    if (activeUser === socket.id) {
-      activeUser = null;
+    // If the user was the waiting user, reset the waiting user
+    if (waitingUser === socket.id) {
+      waitingUser = null;
     }
   });
 });
