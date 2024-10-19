@@ -8,13 +8,12 @@ const port = process.env.PORT || 4500;
 const server = http.createServer(app);
 const io = socketIO(server, {
   cors: {
-    origin: "https://randomlychat.vercel.app", 
+    origin: "https://randomlychat.vercel.app",
     methods: ["GET", "POST"],
   },
 });
 
-let activeUser = null; // Keep track of the first connected user
-const users = {};
+let waitingUser = null; // Track a single waiting user
 
 app.use(cors());
 app.get('/', (req, res) => {
@@ -22,36 +21,53 @@ app.get('/', (req, res) => {
 });
 
 io.on("connection", (socket) => {
-  console.log("New Connection");
+  console.log("New Connection", socket.id);
 
+  // When a user joins
   socket.on('joined', () => {
-    users[socket.id] = "Stranger";
-
-    // Notify the first user when the second one joins
-    if (activeUser === null) {
-      activeUser = socket.id;
+    if (waitingUser === null) {
+      // No one is waiting, this user will wait for a partner
+      waitingUser = socket.id;
       socket.emit('waiting', { message: "Finding stranger to talk..." });
     } else {
-      // Notify both users that they can start chatting
+      // Pair the waiting user with the new one
+      const room = `room-${waitingUser}-${socket.id}`;
+      socket.join(room); // New user joins the room
+      io.to(waitingUser).emit('strangerJoined', { message: "Stranger has joined. Say Hi!" });
       socket.emit('strangerJoined', { message: "Stranger has joined. Say Hi!" });
-      io.to(activeUser).emit('strangerJoined', { message: "Stranger has joined. Say Hi!" });
-      activeUser = null; // Reset after a pair is made
+
+      // Make both users join the same room
+      io.sockets.sockets.get(waitingUser).join(room);
+
+      waitingUser = null; // Reset waiting user
     }
   });
 
+  // Send a message to the pair (within the same room)
   socket.on('message', ({ message, id }) => {
-    io.emit("sendMessage", { message, id });
+    const rooms = Array.from(socket.rooms);
+    const room = rooms[1]; // Get the room the user is in (index 0 is the default room)
+    if (room) {
+      io.to(room).emit("sendMessage", { message, id });
+    }
   });
 
   // When a user disconnects
   socket.on('disconnect', () => {
     console.log('A user disconnected:', socket.id);
 
-    // Notify others that a stranger has left
-    socket.broadcast.emit('leave', { message: "Stranger has left the chat." });
+    // If the disconnected user was waiting, reset the waiting user
+    if (waitingUser === socket.id) {
+      waitingUser = null;
+    }
 
-    // Remove user from users list
-    delete users[socket.id];
+    // Notify the other user in the room that the stranger left
+    const rooms = Array.from(socket.rooms);
+    const room = rooms[1]; // Get the room the user was in
+    socket.broadcast.to(room).emit('leave', { message: "Stranger has left the chat." });
+
+    // Leave the room
+    socket.leave(room);
   });
 });
 
