@@ -18,7 +18,8 @@ Technologies Used
 >🚀 Express.js: Web framework for building APIs and web applications.
 >💬 Socket.IO: Library for real-time communication between web clients and servers.
 
-Getting Started
+## Getting Started
+
 Prerequisites
 Node.js
 MongoDB Atlas account (if using MongoDB)
@@ -37,10 +38,10 @@ Copy code
 npm install
 Set up your MongoDB connection string in the .env file (if applicable).
 Running the Server
+
+
 🚀 To run the server, use:
-bash
-Copy code
+```bash
 node index.js
+```
 The server will listen for incoming WebSocket connections and handle messaging.
-License
-This project is licensed under the MIT License.
