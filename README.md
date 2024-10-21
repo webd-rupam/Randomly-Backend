@@ -22,22 +22,14 @@ Technologies Used
 
 Prerequisites
 Node.js
-MongoDB Atlas account (if using MongoDB)
+
 Installation
 Clone the repository:
-bash
-Copy code
+```bash
 git clone <repository-url>
-Navigate to the project directory:
-bash
-Copy code
-cd socket-server
-Install the dependencies:
-bash
-Copy code
 npm install
-Set up your MongoDB connection string in the .env file (if applicable).
-Running the Server
+```
+
 
 
 🚀 To run the server, use:
